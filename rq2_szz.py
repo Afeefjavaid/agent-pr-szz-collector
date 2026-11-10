@@ -44,8 +44,9 @@ def _force_remove(func, path, exc):
 
 def git(args, cwd, timeout=900):
     try:
-        r = subprocess.run(["git"] + args, cwd=cwd, capture_output=True, text=True,
-                           encoding="utf-8", errors="replace", timeout=timeout)
+                   shallow = ["--shallow-since=2024-10-01"] if attempt < tries - 1 else []   # last try: full history
+            r = subprocess.run(["git", "clone", "--bare", "--quiet"] + shallow + [url, str(d)],
+                               capture_output=True, text=True, timeout=timeout)
     except subprocess.TimeoutExpired:
         return None
     return r.stdout if r.returncode == 0 else None
