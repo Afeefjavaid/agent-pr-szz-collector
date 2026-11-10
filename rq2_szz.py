@@ -1,4 +1,6 @@
-"""SZZ-based post-merge bug detection for AI agent pull requests (v7).
+"""SZZ-based post-merge bug detection for AI agent pull requests (v7.1).
+
+v7.1: if the recent-history (shallow) clone fails twice, the last attempt clones the full history.
 
 v7 uses exactly the same per-PR logic as v5. The only change is speed:
 the pull requests of one repository are analyzed in parallel threads.
@@ -44,9 +46,8 @@ def _force_remove(func, path, exc):
 
 def git(args, cwd, timeout=900):
     try:
-                   shallow = ["--shallow-since=2024-10-01"] if attempt < tries - 1 else []   # last try: full history
-            r = subprocess.run(["git", "clone", "--bare", "--quiet"] + shallow + [url, str(d)],
-                               capture_output=True, text=True, timeout=timeout)
+        r = subprocess.run(["git"] + args, cwd=cwd, capture_output=True, text=True,
+                           encoding="utf-8", errors="replace", timeout=timeout)
     except subprocess.TimeoutExpired:
         return None
     return r.stdout if r.returncode == 0 else None
@@ -128,7 +129,8 @@ def clone_repo(full_name, d, tries=3, timeout=3600):
     url, err = f"https://github.com/{full_name}.git", "unknown"
     for attempt in range(tries):
         try:
-            r = subprocess.run(["git", "clone", "--bare", "--quiet", "--shallow-since=2024-10-01", url, str(d)],
+            shallow = ["--shallow-since=2024-10-01"] if attempt < tries - 1 else []   # last try: full history
+            r = subprocess.run(["git", "clone", "--bare", "--quiet"] + shallow + [url, str(d)],
                                capture_output=True, text=True, timeout=timeout)
             if r.returncode == 0:
                 return None
