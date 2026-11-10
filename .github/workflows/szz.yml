@@ -1,0 +1,55 @@
+name: SZZ collection
+
+on:
+  workflow_dispatch:
+    inputs:
+      first:
+        description: "First repository rank (1 = most PRs)"
+        required: true
+        default: "1"
+      last:
+        description: "Last repository rank"
+        required: true
+        default: "500"
+      repos:
+        description: "Optional test mode: comma-separated repositories (overrides ranks)"
+        required: false
+        default: ""
+
+jobs:
+  szz:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install libraries
+        run: pip install pandas pyarrow
+
+      - name: Run SZZ
+        timeout-minutes: 340
+        run: >
+          python run_szz.py
+          --first ${{ inputs.first }} --last ${{ inputs.last }}
+          --repos "${{ inputs.repos }}"
+          --shard ${{ matrix.shard }} --num-shards 20
+          --workers 2 --inner-workers 3
+          --targets rq2_targets.parquet --out out
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: szz-shard-${{ matrix.shard }}
+          path: out/
+          if-no-files-found: ignore
+          retention-days: 90
