@@ -52,7 +52,7 @@ print(f"Shard {a.shard}/{a.num_shards}: {len(mine)} repositories, {len(mine) - l
 
 start, done = time.time(), 0
 with ThreadPoolExecutor(max_workers=a.workers) as pool:
-    jobs = {pool.submit(s.process_repo, r, targets[targets["full_name"] == r], 5, a.inner_workers): r
+    jobs = {pool.submit(s.process_repo, r, targets[targets["full_name"] == r], 10, a.inner_workers): r
             for r in todo}
     for job in as_completed(jobs):
         r = jobs[job]
